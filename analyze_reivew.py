@@ -1,6 +1,5 @@
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
-from sklearn.metrics import multilabel_confusion_matrix
 from gpt_interface import *
 from sklearn.metrics import precision_recall_fscore_support
 
@@ -24,7 +23,7 @@ df_review_topics = df_review_topics[df_review_topics["topic"].str.contains("irre
 TOPICS_LIST_NEW = ['academics', 'campus',
                    'student_life', 'professors', 'administration']
 
-SAMPLE_SIZE = 20
+SAMPLE_SIZE = len(df_review_topics)
 RANDOM_STATE = 20
 
 '''
@@ -118,12 +117,6 @@ def get_matrix(y_expected, y_pred):
 
     perform_matrix = pd.DataFrame.from_dict(output_dic, orient='index')
 
-    agg_matrix = ['micro', 'macro', 'samples', 'weighted']
-    for method in agg_matrix:
-        agg_stats = precision_recall_fscore_support(y_expected, y_pred, average= method)
-
-        print(f'The {method} average is {agg_stats}')
-
     return perform_matrix
 
 def new_get_matrix(y_expected, y_pred):
@@ -203,35 +196,7 @@ def get_series_num():
 
     return series_num
 
-
 def main():
-    series_num = get_series_num()  # get the current timestamp for logging the results
-
-    X_sample, y_sample = get_sample(n=SAMPLE_SIZE, random_state=RANDOM_STATE)
-    X_train, X_val, X_test = data_splitter(X_sample)
-    y_train, y_val, y_test = data_splitter(y_sample)
-
-    df_gen_reviews = get_labels(X_train, message_tm)
-    df_gen_reviews.to_csv('data/new_sample_results.csv', index=False)
-
-    # df_gen_reviews = pd.read_csv('data/sample_results.csv')
-
-    y_train = create_label_list(y_train, 'topic')
-    df_gen_reviews = create_label_list(df_gen_reviews, 'label_list')
-
-    df_expected = create_dummies(y_train, 'topic')
-    df_pred = create_dummies(df_gen_reviews, 'label_list')
-
-    eval_matix = get_matrix(df_expected.drop('guid', axis=1),
-                            df_pred.drop('guid', axis=1))
-
-    log_prompt(series_num, message_tm, len(X_train), random_state=RANDOM_STATE)
-
-    store_csv(df_pred, 'train_pred', series_num, False)
-    store_csv(eval_matix, 'train_matrix', series_num, True)
-
-
-def test():
 
     X_sample, y_sample = get_sample(df_review_topics, n=SAMPLE_SIZE, random_state=RANDOM_STATE)
     X_train, X_val, X_test = data_splitter(X_sample)
@@ -240,33 +205,21 @@ def test():
     y_train = create_label_list(y_train, 'topic')
     df_expected = create_dummies(y_train, 'topic')
 
-    # prompt_type = ['zero-shot', 'one-shot', 'few-shot']
-    prompt_type = ['zero-shot']
+    prompt_type = ['zero-shot', 'one-shot', 'few-shot']
 
     for strategy in prompt_type:
         series_num = get_series_num()
 
-        # df_pred = pd.read_csv('data/new_sample_results.csv')
-
         df_pred = get_df_pred(X_train, prompt_strategy=strategy)
         df_pred.to_csv('data/new_sample_results.csv', index=False)
-
-        temp_exp = df_expected.drop('guid', axis=1)
-        temp_pred = df_pred.drop('guid', axis=1)
-
-        # the result should have exactly the same labels
-        # print(f'the matrix of y_true {temp_exp.head(5)}')
-        # print(f'the matrix of y_pred {temp_pred.head(5)}')
 
         eval_matrix = get_matrix(df_expected.drop('guid', axis=1),
                                  df_pred.drop('guid', axis=1))
 
-        print(eval_matrix)
-    # log_prompt(series_num, strategy, len(X_train), random_state=RANDOM_STATE)
+        log_prompt(series_num, strategy, len(X_train), random_state=RANDOM_STATE)
 
-    # store_csv(df_pred, 'new_train_pred', series_num, False)
-    # store_csv(eval_matix, 'new_train_matrix', series_num, True)
+        store_csv(df_pred, 'new_train_pred', series_num, False)
+        store_csv(eval_matrix, 'new_train_matrix', series_num, True)
 
-
-test()
+main()
 

@@ -228,7 +228,6 @@ def create_dummies(df, col_name):
 
     for topic in TOPICS_LIST:
         df_dummies[topic] = df_dummies[topic].astype(int)
-    print(f'the output df from gpt_interface.py {df_dummies.head(5)}')
     return df_dummies
 
 

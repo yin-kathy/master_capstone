@@ -8,8 +8,9 @@ input: labeled_review_topics.csv
 output: relabeled dataframe new_review_topics
 document: new topic list
 '''
-
+import csv
 import pandas as pd
+import os
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
@@ -29,9 +30,16 @@ label_replace = {'alumni_network': 'student_life', 'mission': 'administration',
                  'diversity': 'student_life'}
 
 
-def replace_labels(label_list):
+def replace_labels(df, col, map):
 
-    return [label_replace.get(label, label) for label in label_list]
+    '''
+    This function will take in a column of list in string format, and replace the original labels in the list
+    to new labels based on the mapping dictionary in map
+    '''
+
+    df[col] = [','.join(map.get(label, label) for label in topics.split(',')) for topics in df['topic']]
+
+    return df
 
 def create_label_list(df, label_col):
     '''
@@ -72,45 +80,113 @@ def recode_labels(all_labels):
         current_labels.remove(original_label)
 
         # Ask if the user wants to continue
-        continue_choice = input("Do you want to recode another label? (yes/no): ")
-        if continue_choice.lower() != 'yes':
+        while True:
+
+            continue_choice = input("Do you want to recode another label? (yes/no): ")
+            if continue_choice.lower() in ['yes', 'no']:
+                break
+            else:
+                print("Please enter 'yes' or 'no'.")
+
+        if continue_choice.lower() == 'no':
             break
+
 
     print(changes_map)
 
     return changes_map
 
-def create_final_mappings(changes_map = {'value': 'dorms', 'dorms': 'campus'}):
+def create_final_mappings(changes_map):
     final_map = {}
     for original, new in changes_map.items():
-        print(original, new)
+
         final_label = new
         while final_label in changes_map:
-            print(final_label)
             final_label = changes_map[final_label]
         final_map[original] = final_label
-    print(f'final map is {final_map}')
+
     return final_map
+
+def store_recoded_file(df, final_map):
+
+    '''
+
+
+
+    if recode_log not present:
+        create csv
+
+    else:
+        get series number
+        write filename: review_{series_number} and final map to the file
+    '''
+
+    log_file_path = os.path.join('labeled_data', 'recode_log.csv')
+
+    file_exists = os.path.isfile(log_file_path)
+
+    if not file_exists:
+        id = 0
+    else:
+        with open(log_file_path, mode = 'r') as file:
+            reader = csv.reader(file)
+            next(reader, None)
+            ids = [int(row[0]) for row in reader]
+            id = max(ids) + 1 if ids else 0
+
+    file_name = f'df_recoded_review_{id}.csv'
+    file_path = os.path.join('labeled_data', file_name)
+
+    df.to_csv(file_path, index_label=False)
+
+    log_recode(final_map, file_name, id, file_path)
+
+    print(f'dataframed strored as {file_name}')
+    print(f'Log updated.')
+
+
+def log_recode(final_map, file_name, batch_no, path):
+
+    # Check if file exists
+    filename = os.path.join('labeled_data', 'recode_log.csv')
+    file_exists = os.path.isfile(filename)
+
+    # Data to write
+    row = [batch_no, final_map, file_name, path]
+
+    # Open the file in append mode or write mode if it does not exist
+    with open(filename, mode='a', newline='') as file:
+        writer = csv.writer(file)
+
+        # If the file does not exist, write the header first
+        if not file_exists:
+            writer.writerow(['batch_no', 'final_map', 'file_name', 'path'])
+
+        # Write the data row
+        writer.writerow(row)
+
 
 def main():
 
-    df_review_topics = pd.read_csv('labeled_review_topics.csv')
+    df = pd.read_csv('labeled_data/labeled_review_topics.csv')
 
     changes_map = recode_labels(all_labels)
-    print(f'changes map is {changes_map}')
     final_map = create_final_mappings(changes_map)
-    print(f'final map is {final_map}')
-    #
-    # df = create_label_list(df_review_topics, 'topic')
-    # df['topic'] = df['topic'].apply(changes_map)
-    # df['topic'] = df['topic'].apply(lambda x: list(set(x)))
-    # df = list_to_str(df, 'topic')
-    # print(df)
+
+    # df = create_label_list(df, 'topic')
+
+    df = replace_labels(df, 'topic', final_map)
+
+    '''
+    todo: store the coded scheme, file_name, and file size (row num) 
+    '''
+
+    store_recoded_file(df, final_map)
+
+    # print(df.head(10))
     # df.to_csv('new_review_topics', index=False)
 
 # main()
-
 # df_review_topics = pd.read_csv('labeled_review_topics.csv')
-#
-create_final_mappings()
+main()
 

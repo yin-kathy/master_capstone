@@ -1,4 +1,4 @@
-# Project Title
+# LLM for College Review Analysis
 
 This project leverages Large Language Models (LLMs) for text mining, aiming to extract and analyze topic-specific sentiments expressed by online reviews. 
 
@@ -24,7 +24,7 @@ Institute for Education Sciences within the United States Department of Educatio
 #### validation data 
 
 - *df_label_true.csv*: list of topic and sentiment pairs of the validation set
-- - *df_true_topics.csv*: list of topics for each manual annotated reviews
+- *df_true_topics.csv*: list of topics for each manual annotated reviews
 
 
 
